@@ -1,9 +1,6 @@
 name: Run Maricopa Scraper
 
 on:
-  schedule:
-    - cron: "45 15 * * 1-5"  # 8:45 AM AZ time
-    - cron: "45 23 * * 1-5"  # 4:45 PM AZ time
   workflow_dispatch:
 
 jobs:
