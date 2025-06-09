@@ -31,6 +31,12 @@ for case_number, url in zip(case_numbers, urls):
         if table:
             rows = table.find_all("div", class_='row g-0')
             for row in rows:
-                divs = row.find_all("div")
-                for i in range(len(divs)):
-                    if "Description" in divs
+    divs = row.find_all("div")
+    for i in range(len(divs)):
+        if "Description" in divs[i].get_text(strip=True):
+            description = divs[i + 1].get_text(strip=True)
+            if "MURDER" in description.upper():
+                murder_charge = description
+                break
+    if murder_charge:
+        break
