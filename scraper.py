@@ -40,32 +40,37 @@ for case_number, url in zip(case_numbers, urls):
                             if "MURDER" in description.upper():
                                 murder_charges.append(description)
 
-        # Step 2: Extract defendant name based on "Role: DEFENDANT"
-        defendant_names = []
-        party_section = soup.find("div", id="parties")
-        if party_section:
-            rows = party_section.find_all("div", class_="row g-0")
-            for i in range(1, len(rows)):
-                label_div = rows[i].find("div", class_="col-6 col-lg-2")
-                value_div = rows[i].find("div", class_="col-6 col-lg-10")
-                if label_div and value_div and label_div.get_text(strip=True).upper() == "ROLE:":
-                    if value_div.get_text(strip=True).upper() == "DEFENDANT":
-                        # Look one row above for the Name
-                        name_row = rows[i - 1]
-                        name_label = name_row.find("div", class_="col-6 col-lg-2")
-                        name_value = name_row.find("div", class_="col-6 col-lg-10")
-                        if name_label and name_value and name_label.get_text(strip=True).upper() == "NAME:":
-                            defendant_names.append(name_value.get_text(strip=True))
+        # Step 2: Look in Disposition section and match Party Name <-> Murder Description
+        name_charge_pairs = []
+        disposition_header = soup.find("div", string="Disposition Information")
+        if disposition_header:
+            current_row = disposition_header.find_next_sibling()
+            while current_row and current_row.name == "div" and "row" in current_row.get("class", []):
+                divs = current_row.find_all("div")
+                party_name = None
+                charge = None
 
-        # Step 3: Combine murder charges with each defendant name
-        if murder_charges:
-            if defendant_names:
-                for charge in murder_charges:
-                    for name in defendant_names:
-                        results.append([case_number, url, charge, name])
-            else:
-                for charge in murder_charges:
-                    results.append([case_number, url, charge, "No defendant name found"])
+                for i in range(len(divs)):
+                    label = divs[i].get_text(strip=True).upper()
+                    if "PARTY NAME" in label and i + 1 < len(divs):
+                        party_name = divs[i + 1].get_text(strip=True)
+                    elif "DESCRIPTION" in label and i + 1 < len(divs):
+                        desc_text = divs[i + 1].get_text(strip=True)
+                        if "MURDER" in desc_text.upper():
+                            charge = desc_text
+
+                if party_name and charge:
+                    name_charge_pairs.append((party_name, charge))
+
+                current_row = current_row.find_next_sibling()
+
+        # Step 3: Output only murder charges tied to a name from Disposition Info
+        if name_charge_pairs:
+            for name, charge in name_charge_pairs:
+                results.append([case_number, url, charge, name])
+        elif murder_charges:
+            for charge in murder_charges:
+                results.append([case_number, url, charge, "No matching party in Disposition Info"])
 
     except Exception as e:
         print(f"Error processing {case_number}: {e}")
