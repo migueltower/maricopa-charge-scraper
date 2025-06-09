@@ -1,0 +1,30 @@
+name: Run Maricopa Scraper
+
+on:
+  schedule:
+    - cron: "45 15 * * 1-5"  # 8:45 AM AZ time
+    - cron: "45 23 * * 1-5"  # 4:45 PM AZ time
+  workflow_dispatch:
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install beautifulsoup4 gspread google-auth requests
+
+      - name: Run scraper
+        env:
+          GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
+        run: |
+          echo "$GOOGLE_CREDS" > google-creds.json
+          python scraper.py
