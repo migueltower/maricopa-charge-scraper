@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_file("google-creds.json", scopes=SCOPES)
 client = gspread.authorize(creds)
-spreadsheet = client.open("Maricopa Charges")  # Ensure this matches your actual Sheet title
+spreadsheet = client.open("Maricopa Charges")  # Match your actual Sheet title
 sheet = spreadsheet.sheet1
 
 # --- Generate case numbers & URLs ---
@@ -18,7 +18,6 @@ end = 100
 case_numbers = [f"{prefix}{str(i).zfill(6)}" for i in range(start, end + 1)]
 urls = [f'https://www.superiorcourt.maricopa.gov/docket/CriminalCourtCases/caseInfo.asp?caseNumber={case}' for case in case_numbers]
 
-# Header row
 results = [["Case Number", "URL", "Murder Charge Found", "Party Name"]]
 
 # --- Scrape ---
@@ -41,18 +40,20 @@ for case_number, url in zip(case_numbers, urls):
                             if "MURDER" in description.upper():
                                 murder_charges.append(description)
 
-        # Step 2: Get all party names
+        # Step 2: Get all names from party section — look for "Party Name" or "Name:"
         party_names = []
         party_section = soup.find("div", id="parties")
         if party_section:
             party_rows = party_section.find_all("div", class_="row g-0")
             for row in party_rows:
                 divs = row.find_all("div")
-                if len(divs) >= 2 and "Party Name" in divs[0].get_text(strip=True):
-                    name = divs[1].get_text(strip=True)
-                    party_names.append(name)
+                if len(divs) >= 2:
+                    label = divs[0].get_text(strip=True).upper()
+                    if "PARTY NAME" in label or label == "NAME:":
+                        name = divs[1].get_text(strip=True)
+                        party_names.append(name)
 
-        # Step 3: Only record if there’s at least one murder charge
+        # Step 3: Combine each murder charge with each party name
         if murder_charges:
             if party_names:
                 for charge in murder_charges:
