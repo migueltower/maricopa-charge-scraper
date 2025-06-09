@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_file("google-creds.json", scopes=SCOPES)
 client = gspread.authorize(creds)
-spreadsheet = client.open("Maricopa Charges")  # Match your actual Sheet title
+spreadsheet = client.open("Maricopa Charges")
 sheet = spreadsheet.sheet1
 
 # --- Generate case numbers & URLs ---
@@ -40,28 +40,32 @@ for case_number, url in zip(case_numbers, urls):
                             if "MURDER" in description.upper():
                                 murder_charges.append(description)
 
-        # Step 2: Get all names from party section — look for "Party Name" or "Name:"
-        party_names = []
+        # Step 2: Extract defendant name based on "Role: DEFENDANT"
+        defendant_names = []
         party_section = soup.find("div", id="parties")
         if party_section:
-            party_rows = party_section.find_all("div", class_="row g-0")
-            for row in party_rows:
-                divs = row.find_all("div")
-                if len(divs) >= 2:
-                    label = divs[0].get_text(strip=True).upper()
-                    if "PARTY NAME" in label or label == "NAME:":
-                        name = divs[1].get_text(strip=True)
-                        party_names.append(name)
+            rows = party_section.find_all("div", class_="row g-0")
+            for i in range(1, len(rows)):
+                label_div = rows[i].find("div", class_="col-6 col-lg-2")
+                value_div = rows[i].find("div", class_="col-6 col-lg-10")
+                if label_div and value_div and label_div.get_text(strip=True).upper() == "ROLE:":
+                    if value_div.get_text(strip=True).upper() == "DEFENDANT":
+                        # Look one row above for the Name
+                        name_row = rows[i - 1]
+                        name_label = name_row.find("div", class_="col-6 col-lg-2")
+                        name_value = name_row.find("div", class_="col-6 col-lg-10")
+                        if name_label and name_value and name_label.get_text(strip=True).upper() == "NAME:":
+                            defendant_names.append(name_value.get_text(strip=True))
 
-        # Step 3: Combine each murder charge with each party name
+        # Step 3: Combine murder charges with each defendant name
         if murder_charges:
-            if party_names:
+            if defendant_names:
                 for charge in murder_charges:
-                    for name in party_names:
+                    for name in defendant_names:
                         results.append([case_number, url, charge, name])
             else:
                 for charge in murder_charges:
-                    results.append([case_number, url, charge, "No party name found"])
+                    results.append([case_number, url, charge, "No defendant name found"])
 
     except Exception as e:
         print(f"Error processing {case_number}: {e}")
