@@ -1,11 +1,15 @@
-name: Run Maricopa Scraper
+name: Scrape Maricopa Murder Charges (Manual Only, 50k Batches)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Only runs manually
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk_start: [0, 50000, 100000, 150000, 200000, 250000, 300000, 350000, 400000, 450000,
+                      500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000]
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -16,12 +20,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install beautifulsoup4 gspread google-auth requests
+        run: pip install beautifulsoup4 gspread google-auth requests
 
-      - name: Run scraper
+      - name: Run scraper for 50k chunk
         env:
           GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
         run: |
           echo "$GOOGLE_CREDS" > google-creds.json
-          python scraper.py
+          python scraper.py ${{ matrix.chunk_start }} $(( ${{ matrix.chunk_start }} + 49999 ))
