@@ -51,7 +51,11 @@ for case_number, url in zip(case_numbers, urls):
     except Exception as e:
         print(f"Error processing {case_number}: {e}")
 
-# --- Append results to Google Sheet ---
+# --- Append results to Google Sheet safely ---
 if results:
+    existing_data = sheet.get_all_values()
+    if not existing_data:
+        sheet.append_row(["Case Number", "URL", "Murder Charge Found"])
     sheet.append_rows(results)
+
 print(f"Upload complete for batch {start}-{end}")
