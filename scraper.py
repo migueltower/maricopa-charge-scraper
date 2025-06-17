@@ -2,23 +2,26 @@ import requests
 from bs4 import BeautifulSoup
 import gspread
 from google.oauth2.service_account import Credentials
+import sys
+
+# --- Command line input for batch range ---
+start = int(sys.argv[1])
+end = int(sys.argv[2])
 
 # --- Google Sheets Setup ---
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_file("google-creds.json", scopes=SCOPES)
 client = gspread.authorize(creds)
-spreadsheet = client.open("Maricopa Charges")  # Make sure this name matches your actual sheet
+spreadsheet = client.open("Maricopa Charges")
 sheet = spreadsheet.sheet1
 
 # --- Generate case numbers & URLs ---
 year = 2024
 prefix = f"CR{year}-"
-start = 0
-end = 170000
 case_numbers = [f"{prefix}{str(i).zfill(6)}" for i in range(start, end + 1)]
 urls = [f'https://www.superiorcourt.maricopa.gov/docket/CriminalCourtCases/caseInfo.asp?caseNumber={case}' for case in case_numbers]
 
-results = [["Case Number", "URL", "Murder Charge Found"]]  # Header row
+results = []
 
 # --- Scrape only MURDER charges ---
 for case_number, url in zip(case_numbers, urls):
@@ -48,7 +51,11 @@ for case_number, url in zip(case_numbers, urls):
     except Exception as e:
         print(f"Error processing {case_number}: {e}")
 
-# --- Write only matching cases to Google Sheet ---
-sheet.clear()
-sheet.append_rows(results)
-print("Upload complete.")
+# --- Append results to Google Sheet safely ---
+if results:
+    existing_data = sheet.get_all_values()
+    if not existing_data:
+        sheet.append_row(["Case Number", "URL", "Murder Charge Found"])
+    sheet.append_rows(results)
+
+print(f"Upload complete for batch {start}-{end}")
