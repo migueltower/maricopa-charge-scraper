@@ -15,6 +15,15 @@ client = gspread.authorize(creds)
 spreadsheet = client.open("Maricopa Charges")
 sheet = spreadsheet.sheet1
 
+# --- Fake browser headers to load full site content ---
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/113.0.0.0 Safari/537.36"
+    )
+}
+
 # --- Generate case numbers & URLs ---
 year = 2024
 prefix = f"CR{year}-"
@@ -26,13 +35,12 @@ results = []
 # --- Scrape both docket and disposition-based MURDER charges ---
 for case_number, url in zip(case_numbers, urls):
     try:
-        req = requests.get(url)
+        req = requests.get(url, headers=HEADERS)
         soup = BeautifulSoup(req.content, "html.parser")
 
         murder_found = False
         murder_description = None
 
-        # Check if docket section exists
         table = soup.find("div", id="tblDocket12")
         if not table:
             print(f"⚠️ No tblDocket12 found for {case_number}")
@@ -58,13 +66,8 @@ for case_number, url in zip(case_numbers, urls):
         if not murder_found:
             for row in rows:
                 divs = row.find_all("div")
-                party_name = None
-                description = None
-
                 for i in range(len(divs)):
                     label = divs[i].get_text(strip=True).upper()
-                    if "PARTY NAME" in label and i + 1 < len(divs):
-                        party_name = divs[i + 1].get_text(strip=True)
                     if "DESCRIPTION" in label and i + 1 < len(divs):
                         description = divs[i + 1].get_text(strip=True)
                         print(f"Case {case_number} → Found disposition-style description: {description}")
