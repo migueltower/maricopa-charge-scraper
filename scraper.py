@@ -23,42 +23,63 @@ urls = [f'https://www.superiorcourt.maricopa.gov/docket/CriminalCourtCases/caseI
 
 results = []
 
-# --- Scrape only MURDER charges ---
+# --- Scrape both docket and disposition-based MURDER charges ---
 for case_number, url in zip(case_numbers, urls):
     try:
         req = requests.get(url)
         soup = BeautifulSoup(req.content, "html.parser")
 
-        # Debug: Log if tblDocket12 was found
-        if not soup.find("div", id="tblDocket12"):
-            print(f"⚠️ No tblDocket12 found for {case_number}")
+        murder_found = False
+        murder_description = None
 
+        # Check if docket section exists
         table = soup.find("div", id="tblDocket12")
-        murder_charge = None
+        if not table:
+            print(f"⚠️ No tblDocket12 found for {case_number}")
+            continue
 
-        if table:
-            rows = table.find_all("div", class_='row g-0')
+        # Try docket-style layout
+        rows = table.find_all("div", class_="row g-0")
+        for row in rows:
+            divs = row.find_all("div")
+            for i in range(len(divs)):
+                if "Description" in divs[i].get_text(strip=True):
+                    if i + 1 < len(divs):
+                        description = divs[i + 1].get_text(strip=True)
+                        print(f"Case {case_number} → Found description: {description}")
+                        if "MURDER" in description.upper():
+                            murder_description = description
+                            murder_found = True
+                            break
+            if murder_found:
+                break
+
+        # Fallback: Try disposition-style layout
+        if not murder_found:
             for row in rows:
                 divs = row.find_all("div")
+                party_name = None
+                description = None
+
                 for i in range(len(divs)):
-                    if "Description" in divs[i].get_text(strip=True):
-                        if i + 1 < len(divs):  # Avoid index error
-                            description = divs[i + 1].get_text(strip=True)
-
-                            # Debug: Print every description encountered
-                            print(f"Case {case_number} → Found description: {description}")
-
-                            if "MURDER" in description.upper():
-                                murder_charge = description
-                                break
-                if murder_charge:
+                    label = divs[i].get_text(strip=True).upper()
+                    if "PARTY NAME" in label and i + 1 < len(divs):
+                        party_name = divs[i + 1].get_text(strip=True)
+                    if "DESCRIPTION" in label and i + 1 < len(divs):
+                        description = divs[i + 1].get_text(strip=True)
+                        print(f"Case {case_number} → Found disposition-style description: {description}")
+                        if "MURDER" in description.upper():
+                            murder_description = description
+                            murder_found = True
+                            break
+                if murder_found:
                     break
 
-        if murder_charge:
-            results.append([case_number, url, murder_charge])
+        if murder_found:
+            results.append([case_number, url, murder_description])
 
     except Exception as e:
-        print(f"Error processing {case_number}: {e}")
+        print(f"❌ Error processing {case_number}: {e}")
 
 # --- Diagnostics ---
 print(f"\n✅ Results found in batch {start}-{end}: {len(results)}")
