@@ -28,6 +28,11 @@ for case_number, url in zip(case_numbers, urls):
     try:
         req = requests.get(url)
         soup = BeautifulSoup(req.content, "html.parser")
+
+        # Debug: Log if tblDocket12 was found
+        if not soup.find("div", id="tblDocket12"):
+            print(f"⚠️ No tblDocket12 found for {case_number}")
+
         table = soup.find("div", id="tblDocket12")
         murder_charge = None
 
@@ -39,6 +44,10 @@ for case_number, url in zip(case_numbers, urls):
                     if "Description" in divs[i].get_text(strip=True):
                         if i + 1 < len(divs):  # Avoid index error
                             description = divs[i + 1].get_text(strip=True)
+
+                            # Debug: Print every description encountered
+                            print(f"Case {case_number} → Found description: {description}")
+
                             if "MURDER" in description.upper():
                                 murder_charge = description
                                 break
