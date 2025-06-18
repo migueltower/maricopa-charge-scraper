@@ -1,4 +1,4 @@
-name: Scrape Maricopa Charges (Manual Only - 20k Batches)
+name: Scrape Maricopa Charges (150000–170000 only)
 
 on:
   workflow_dispatch:
@@ -6,12 +6,7 @@ on:
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        chunk_start: [
-          0, 20000, 40000, 60000, 80000,
-          100000, 120000, 140000, 160000
-        ]
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -24,11 +19,9 @@ jobs:
       - name: Install dependencies
         run: pip install beautifulsoup4 gspread google-auth requests
 
-      - name: Run scraper batch
+      - name: Run scraper for 150k–170k
         env:
           GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
         run: |
           echo "$GOOGLE_CREDS" > google-creds.json
-          END=$(( ${{ matrix.chunk_start }} + 19999 ))
-          if [ $END -gt 170000 ]; then END=170000; fi
-          python scraper.py ${{ matrix.chunk_start }} $END
+          p
