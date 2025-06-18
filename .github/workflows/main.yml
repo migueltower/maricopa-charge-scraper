@@ -24,4 +24,4 @@ jobs:
           GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
         run: |
           echo "$GOOGLE_CREDS" > google-creds.json
-          p
+          python scraper.py 150000 170000
