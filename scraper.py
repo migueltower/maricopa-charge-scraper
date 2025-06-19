@@ -31,11 +31,10 @@ async def scrape():
             url = f"https://www.superiorcourt.maricopa.gov/docket/CriminalCourtCases/caseInfo.asp?caseNumber={case_number}"
             try:
                 await page.goto(url, timeout=60000)
-                await page.wait_for_timeout(1500)  # let the JS render briefly
-
-                # Check if tblDocket12 exists
-                if not await page.locator("#tblDocket12").count():
-                    print(f"⚠️ No tblDocket12 found for {case_number}")
+                try:
+                    await page.wait_for_selector("#tblDocket12", timeout=10000)
+                except:
+                    print(f"⚠️ Timed out waiting for tblDocket12 for {case_number}")
                     continue
 
                 # Pull all rows under tblDocket12
