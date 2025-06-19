@@ -43,8 +43,9 @@ async def scrape():
                 for row in rows:
                     text = await row.inner_text()
                     if "MURDER" in text.upper():
-                        print(f"Case {case_number} → Found description: {text.strip().replace('\n', ' | ')}")
-                        results.append([case_number, url, text.strip().replace('\n', ' | ')])
+                        clean_text = text.strip().replace("\n", " | ")
+                        print(f"Case {case_number} → Found description: {clean_text}")
+                        results.append([case_number, url, clean_text])
                         break
 
             except Exception as e:
